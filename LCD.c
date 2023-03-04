@@ -67,21 +67,22 @@ void lcdInit(lcd_config_t* lcd) {
     __delay_ms(2); // wait for more than 1.52ms
 }
 
-void setCursor(lcd_config_t* lcd, uint8_t col, uint8_t row) {
+void setCursor(lcd_config_t* lcd, int8_t col, int8_t row) {
     static const uint8_t row_offsets[] = {0x00, 0x40, 0x14, 0x54};
-    if (row >= 16) {
-        row = 15;
-    }
+    lcd->cCol = col; //Seguimiento del cursor.
+    lcd->cRow = row;
     writeCommand(lcd, 0x80 | (col + row_offsets[row]));
 }
 
 void lcdWriteChar(lcd_config_t* lcd, char c) {
     writeData(lcd, c);
+    lcd->cCol++;
 }
 
 void lcdPrint(lcd_config_t* lcd, const char* str) {
     while (*str) {
         writeData(lcd, *str++);
+        lcd->cCol++;
     }
 }
 
@@ -117,10 +118,12 @@ void lcdScrollDisplayRight(lcd_config_t* lcd) {
 }
 
 void lcdCursorRight(lcd_config_t* lcd) {
+    lcd->cCol++;
     writeCommand(lcd, LCD_CURSORSHIFT | LCD_CURSORMOVE | LCD_MOVERIGHT);
 }
 
 void lcdCursorLeft(lcd_config_t* lcd) {
+    lcd->cCol--;
     writeCommand(lcd, LCD_CURSORSHIFT | LCD_CURSORMOVE | LCD_MOVELEFT);
 }
 
@@ -139,39 +142,30 @@ inline void writeData(lcd_config_t* lcd, uint8_t data) {
     writeNibble(lcd, data & 0x0F);
 }
 
-void lcdScrollRowText(lcd_config_t* lcd, const char* str, uint8_t row, uint8_t direction/*, uint16_t speed*/){
+void lcdScrollRowText(lcd_config_t* lcd, const char* str, uint8_t row, uint8_t direction/*, uint16_t speed*/) {
     size_t length = strlen(str);
     lcdNoBlink(lcd);
     lcdShowNoCursor(lcd);
-    switch(direction){
-        case LCD_MOVELEFT:
-            for(uint8_t i = 0; i<=length-lcd->cols; i++){
+    switch (direction) {
+        case LCD_MOVELEFT: // a mejorar...
+            for (uint8_t i = 0; i <= length - lcd->cols; i++) {
                 setCursor(lcd, 0, row);
-                lcdPrint(lcd, str+i);
+                lcdPrint(lcd, str + i);
                 __delay_ms(300); //A cambiar...
                 //lcdClear(lcd); AFECTA AL RESTO DEL TEXTO.
             }
             break;
         case LCD_MOVERIGHT:
         default:
-            str+= length;
-            for(uint8_t i = 0; i<length+1 ; i++){
+            str += length;
+            for (uint8_t i = 0; i < length + 1; i++) {
                 setCursor(lcd, 0, row);
-                lcdPrint(lcd, str-i);
+                lcdPrint(lcd, str - i);
                 __delay_ms(300);
             }
             break;
     }
 }
 
-/*
-inline void lcdBacklight(lcd_config_t* lcd){
-    pinOn(&(lcd->backlight));
-}
-
-inline void lcdNoBacklight(lcd_config_t* lcd){
-    pinOff(&(lcd->backlight));
-}
- */
 
 

@@ -10,6 +10,14 @@ Muchas veces uno se puede encontrar con la necesidad de tener un proyecto de men
 
 Simple, los 2 archivos deben de arrastrarse, ya sea al /include del XC8, o donde sea, debe de linkearse con el compilador de XC8, asi se entera el mismo, la existencia de la libreria.
 
+Aclaracion:
+> Esta linea debe de ser cambiada previa a su compilacion, dependiendo de la frecuencia del clock, ya que las rutinas de inicializacion dependen de la misma.
+> ```c
+>   // LCD.h
+>   #define _XTAL_FREQ 4000000 👈
+>   #include <xc.h>
+> ```
+
 ## Uso
 
 Es similar a Liquid Crystal de Arduino, solo se deben de definir los pines a utilizar (En el P16F628A **NO** se puede utilizar RA5, ya que no tiene un **Output driver**)
@@ -28,8 +36,8 @@ void main(){
         );
         lcdInit(&lcd); // Hace la rutina de inicializacion del lcd, mientras el lcd tenga tension, no va a ser necesario volver a ejecutar la funcion.
     //Ejemplo      col row
-    setCursor(&lcd, 0, 0); //A todas las funciones hay que pasarle la referencia al lcd..
-    lcdPrint(&lcd, "Hola Mundo!"); // 👋 👋
+        LCD_Home(&lcd); //A todas las funciones hay que pasarle la referencia al lcd..
+        lcdPrint(&lcd, "Hola Mundo!"); // 👋 👋
     while(1);
     return;
 }
@@ -141,7 +149,7 @@ Para el que no sepa que son, son "auto-rellenados" de codigo, el struct del lcd 
 
 Estos son un par de ejemplos que pueden servir como plantilla...
 
-> <font size="4">Contador en pantalla</font>
+> <font size="4">Contador en pantalla 🔢</font>
 >
 > ```c
 >   #include "LCD.h" //Incluir la mayoria de las librerias relevantes...
@@ -257,11 +265,11 @@ Estos son un par de ejemplos que pueden servir como plantilla...
 >            lcdCursorLeft(&lcd);
 >            ubicacion[0]--;
 >            check(&lcd, ubicacion);
->        } else if (!RA2) {
+>        } else if (!RA2) { // UP
 >            while (!RA2);
 >            ubicacion[1]--;
 >            check(&lcd, ubicacion);
->        } else if (!RA3) {
+>        } else if (!RA3) { // DOWN
 >            while (!RA3);
 >            lcdCursorLeft(&lcd);
 >            ubicacion[1]++;
@@ -276,3 +284,86 @@ Estos son un par de ejemplos que pueden servir como plantilla...
 >
 >
 > ```
+
+> 
+> <font size="4">Seguimiento de Cursor 🖱️</font>
+>
+> ```c
+>   uint8_t cuadrado_vacio[8] = {
+>    0b11111,
+>    0b10001,
+>    0b10001,
+>    0b10001,
+>    0b10001,
+>    0b10001,
+>    0b11111,
+>    0b00000, //A testear la ultima fila, en simulacion no figura...
+>};
+>
+>void menu(lcd_config_t* lcd) {
+>    lcdClear(lcd);
+>    setCursor(lcd, 1, 0);
+>    lcdPrint(lcd, "Menu ejemplo");
+>    setCursor(lcd, 0, 1);
+>    lcdPrint(lcd, "1  2  3  4  5");
+>    for (uint8_t i = 1; i < lcd->cols; i += 3) {
+>        setCursor(lcd, i, lcd->cRow);
+>        lcdWriteCustomChar(lcd, 0)
+>    }
+>    setCursor(lcd, 1, lcd->cRow);
+>}
+>
+>void main() {
+>    nRBPU = 0;
+>    CMCON = 7;
+>    TRISA = 0b00001111; //RA0-3 Entradas. (pull-up externo 10k?)
+>    PORTA = 0;
+>    TRISB = 0b10000000; //RB7 entrada, con pull-up.
+>    PORTB = 0;
+>    lcd_config_t lcd = INIT_LCD_CONFIG(// RB0-6 al lcd.
+>            &PORTB, 0,
+>            &PORTB, 1,
+>            &PORTB, 2,
+>            &PORTB, 3,
+>            &PORTB, 4,
+>            &PORTB, 5,
+>            &PORTB, 6
+>            );
+>    lcdInit(&lcd);
+>    lcdCreateChar(&lcd, cuadrado_vacio, 0);
+>    LCD_Home(&lcd);
+>    lcdShowCursor(&lcd); //cl  rw
+>    lcdBlink(&lcd);
+>    menu(&lcd);
+>    while (1) {
+>        if (!RB7) { // Boton en RB7.
+>            while (!RB7);
+>            //Imprimo ubicacion.
+>            lcdClear(&lcd);
+>            uint8_t col = lcd.cCol, row = lcd.cRow;
+>            setCursor(&lcd, 0, 0);
+>            lcdPrint(&lcd, "Ubicacion: ");
+>            setCursor(&lcd, 1, 1);
+>            char buf[6];
+>            sprintf(buf, "%d,%d", col, row);
+>            lcdPrint(&lcd, buf);
+>            __delay_ms(900);
+>            menu(&lcd);
+>        } else if (!RA0) { //RIGHT
+>            setCursor(&lcd, lcd.cCol + 3, lcd.cRow);
+>            if (lcd.cCol >= lcd.cols) setCursor(&lcd, 1, lcd.cRow);
+>            while (!RA0);
+>        } else if (!RA1) { //LEFT
+>            setCursor(&lcd, lcd.cCol - 3, lcd.cRow);
+>            if (lcd.cCol < 0) setCursor(&lcd, 13, lcd.cRow);
+>            while (!RA1);
+>        }
+>    }
+>}
+>
+> ```
+>
+> El codigo previo, segun el dashboard de MPLAB X, llena un 46%, y 65%, la memoria, y la memoria de programa respectivamente. De ser optimizado el codigo de main() y menu() podria reducirse, la libreria por si sola solo ocupa el espacio de struct (en memoria de uso general), el programa se expande mientras mas llamados a funciones hagamos
+>
+>
+>
