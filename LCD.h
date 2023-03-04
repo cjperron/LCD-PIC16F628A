@@ -39,7 +39,7 @@ typedef struct {
             { .port = d7_port, .pin = d7_pin }      \
         },                                          \
         .displayControl = 0,                        \
-        .cols = 16,                                 \ //A mejorar
+        .cols = 16,                                 \
         .rows = 2                                   \
     }
 //Macros
