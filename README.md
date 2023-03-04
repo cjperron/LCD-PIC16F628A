@@ -289,6 +289,7 @@ Estos son un par de ejemplos que pueden servir como plantilla...
 > <font size="4">Seguimiento de Cursor 🖱️</font>
 >
 > ```c
+>   #include "LCD.h"
 >   uint8_t cuadrado_vacio[8] = {
 >    0b11111,
 >    0b10001,
